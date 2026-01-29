@@ -5,46 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>アングラー診断</title>
     <style>
-        body { 
-            background: #000b1a; color: #00ffff; text-align: center; 
-            font-family: sans-serif; margin: 0; padding: 10px;
-        }
+        body { background: #000b1a; color: #00ffff; text-align: center; font-family: sans-serif; margin: 0; padding: 10px; }
         h1 { font-size: 1.4rem; margin: 10px 0; }
-        
-        /* カメラ・写真表示エリア */
         .container { position: relative; width: 280px; height: 350px; margin: 0 auto; background: #000; border: 2px solid #00ffff; border-radius: 10px; overflow: hidden; }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        canvas { display: none; z-index: 5; } /* 撮影した写真用 */
-
-        /* スキャン線 */
+        canvas { display: none; z-index: 5; }
         .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #fff; box-shadow: 0 0 10px #00ffff; z-index: 10; display: none; animation: scan 1.5s infinite; }
         @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
-
-        /* ボタン */
         .btn { background: #ff4136; color: #fff; padding: 12px 30px; border-radius: 50px; border: none; font-weight: bold; margin-top: 15px; cursor: pointer; }
-        .save-hint { font-size: 0.7rem; color: #88ffff; margin-top: 5px; display: none; }
-
-        /* 結果テキストのオーバーレイ（写真の上に載せる） */
-        .result-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.6); color: #fff; padding: 10px;
-            font-size: 0.8rem; text-align: left; box-sizing: border-box;
-            z-index: 15; display: none; border-top: 1px solid #00ffff;
-        }
+        .result-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0, 0, 0, 0.7); color: #fff; padding: 10px; font-size: 0.8rem; text-align: left; box-sizing: border-box; z-index: 15; display: none; border-top: 1px solid #00ffff; white-space: pre-wrap; }
     </style>
 </head>
 <body>
     <h1>🎣 アングラー診断</h1>
     
-    <div class="container" id="captureArea">
-        <video id="video" autoplay playsinline></video>
+    <div class="container">
+        <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas"></canvas>
         <div id="scanLine" class="scan-line"></div>
         <div id="resultOverlay" class="result-overlay"></div>
     </div>
 
     <button id="snap" class="btn">適正をスキャン</button>
-    <div id="saveHint" class="save-hint">※写真を長押しで保存できるぞ！</div>
 
     <script>
         const video = document.getElementById('video');
@@ -52,38 +34,48 @@
         const resultOverlay = document.getElementById('resultOverlay');
         const scanLine = document.getElementById('scanLine');
         const snapBtn = document.getElementById('snap');
-        const saveHint = document.getElementById('saveHint');
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(s => video.srcObject = s);
+        // 音声合成の準備
+        function speak(text) {
+            const uttr = new SpeechSynthesisUtterance(text);
+            uttr.lang = 'ja-JP';
+            uttr.rate = 1.0; // 速度
+            uttr.pitch = 1.0; // 声の高さ
+            window.speechSynthesis.speak(uttr);
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => {
+            video.srcObject = s;
+            video.play();
+        });
 
         snapBtn.addEventListener('click', () => {
-            // スキャン演出
+            // 診断開始の音声
+            speak("スキャンを開始します。動かないでください。");
+            
             scanLine.style.display = 'block';
             snapBtn.disabled = true;
             resultOverlay.style.display = 'none';
             canvas.style.display = 'none';
 
-            // 診断データ取得
             fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) })
             .then(r => r.json())
             .then(data => {
                 setTimeout(() => {
-                    // 写真を撮る
                     const ctx = canvas.getContext('2d');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     ctx.drawImage(video, 0, 0);
 
-                    // 表示切り替え
                     canvas.style.display = 'block';
                     scanLine.style.display = 'none';
                     resultOverlay.innerText = data.result;
                     resultOverlay.style.display = 'block';
-                    saveHint.style.display = 'block';
-                    snapBtn.innerText = "もう一度スキャン";
                     snapBtn.disabled = false;
-                }, 2000);
+
+                    // 結果発表の音声
+                    speak("診断完了。こんなん出ましたけど！");
+                }, 2500);
             });
         });
     </script>
