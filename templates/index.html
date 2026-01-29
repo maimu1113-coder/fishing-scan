@@ -3,63 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>アングラー診断 PRO</title>
+    <title>Mac Fishing | アングラー診断</title>
     <style>
-        body { background: #000b1a; color: #00ffff; text-align: center; font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; padding: 10px; overflow: hidden; }
-        .container { position: relative; width: 300px; height: 380px; margin: 0 auto; background: #000; border: 4px double #00ffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px #00ffff; }
+        body { 
+            background: #000b1a; color: #00ffff; text-align: center; 
+            font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; padding: 10px;
+        }
+
+        /* 企業ロゴエリア */
+        .brand-header {
+            margin: 10px 0 5px 0;
+        }
+        .brand-logo {
+            width: 150px; /* ロゴのサイズ調整 */
+            height: auto;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+        }
+        .app-title {
+            font-size: 1.1rem; color: #fff; letter-spacing: 2px;
+            margin-bottom: 15px; font-weight: bold;
+        }
+        
+        /* カメラコンテナ：画像のようなネオンブルーの枠 */
+        .container { 
+            position: relative; width: 280px; height: 320px; margin: 0 auto; 
+            background: #000; border: 3px solid #00ffff; border-radius: 15px; 
+            overflow: hidden; box-shadow: 0 0 20px #00ffff;
+        }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         
-        .target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 180px; height: 180px; border: 2px dashed #ff0000; z-index: 20; }
-        .target-box::before { content: "LOCK ON"; position: absolute; top: -20px; left: 0; color: #ff0000; font-size: 10px; font-weight: bold; }
+        /* LOCK ONマーカー */
+        .target-box { 
+            position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; 
+            border: 2px dashed #ff4136; z-index: 20; box-sizing: border-box;
+        }
+        .lock-text {
+            position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+            background: #ff4136; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 3px;
+        }
 
-        .gauge-container { position: absolute; bottom: 80px; left: 10%; width: 80%; height: 12px; border: 1px solid #00ffff; z-index: 25; display: none; background: rgba(0,0,0,0.5); }
-        .gauge-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ffff, #ff0000); }
+        .btn { 
+            background: linear-gradient(180deg, #ff4136 0%, #d00 100%); 
+            color: #fff; padding: 12px 40px; border-radius: 50px; border: none; 
+            font-weight: bold; margin-top: 20px; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
+        }
 
-        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px #ff0000; z-index: 30; display: none; animation: scan 1.2s infinite linear; }
+        /* 結果表示：画像のようなグレー透過ボックス */
+        .result-box {
+            margin: 20px auto; width: 280px; background: rgba(255, 255, 255, 0.1);
+            padding: 15px; border-radius: 10px; text-align: left;
+            border: 1px solid rgba(0, 255, 255, 0.2); display: none;
+        }
+        .result-item { margin-bottom: 10px; font-size: 0.9rem; }
+        .label { color: #00ffff; font-weight: bold; }
+        
+        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #fff; box-shadow: 0 0 15px #00ffff; z-index: 30; display: none; animation: scan 1.5s infinite linear; }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
-        .result-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 11, 26, 0.9); color: #fff; z-index: 40; display: none; padding: 20px; box-sizing: border-box; border: 2px solid #00ffff; }
-        .result-header { font-size: 1.2rem; color: #ffdc00; margin-bottom: 15px; border-bottom: 2px solid #ffdc00; padding-bottom: 5px; }
-        .result-content { font-size: 0.9rem; text-align: left; line-height: 1.8; white-space: pre-wrap; }
-
-        .btn { background: #ff4136; color: #fff; padding: 15px 40px; border-radius: 5px; border: 2px solid #fff; font-weight: bold; margin-top: 20px; font-size: 1.1rem; cursor: pointer; box-shadow: 0 5px 15px rgba(255,65,54,0.4); }
-        .save-hint { font-size: 0.7rem; color: #88ffff; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h1 style="text-shadow: 0 0 10px #00ffff; font-size: 1.5rem;">ANGLER SCANNER v2.0</h1>
+    <div class="brand-header">
+        <img src="https://your-image-url.com/mac-fishing-logo.png" alt="Mac Fishing" class="brand-logo">
+    </div>
+    <div class="app-title">ANGLER SCANNER v2.0</div>
     
-    <div class="container" id="captureArea">
+    <div class="container">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas" style="display:none;"></canvas>
-        <div class="target-box" id="marker"></div>
+        <div id="marker" class="target-box"><span class="lock-text">LOCK ON</span></div>
         <div id="scanLine" class="scan-line"></div>
-        
-        <div class="gauge-container" id="gaugeBox">
-            <div style="font-size:8px; color:#fff; text-align:left;">DETECTING KILLER INSTINCT (殺気検知中...)</div>
-            <div class="gauge-fill" id="gaugeFill"></div>
-        </div>
-
-        <div id="resultOverlay" class="result-overlay">
-            <div class="result-header">【アングラー鑑定書】</div>
-            <div class="result-content" id="resultText"></div>
-            <button onclick="location.reload()" style="background:none; border:1px solid #00ffff; color:#00ffff; margin-top:20px; padding:5px 15px; cursor:pointer;">RE-SCAN</button>
-        </div>
     </div>
 
-    <button id="snap" class="btn">TARGET SCAN</button>
-    <p class="save-hint">※スキャン完了後、画像を長押しで保存可能</p>
+    <button id="snap" class="btn">適正をスキャン</button>
+
+    <div id="resultBox" class="result-box">
+        <div class="result-item"><span class="label">【称号】：</span><span id="resTitle"></span></div>
+        <div class="result-item"><span class="label">【適正】：</span><span id="resScore"></span></div>
+        <div class="result-item" style="margin-top:15px;"><span class="label">【一言】：</span><br><span id="resAdvice"></span></div>
+    </div>
 
     <script>
+        // 前回のスクリプト機能をここに統合（音声、スキャン、撮影など）
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const resultOverlay = document.getElementById('resultOverlay');
-        const resultText = document.getElementById('resultText');
-        const scanLine = document.getElementById('scanLine');
-        const gaugeBox = document.getElementById('gaugeBox');
-        const gaugeFill = document.getElementById('gaugeFill');
+        const resultBox = document.getElementById('resultBox');
         const snapBtn = document.getElementById('snap');
-        const marker = document.getElementById('marker');
+        const scanLine = document.getElementById('scanLine');
 
         function speak(text) {
             const uttr = new SpeechSynthesisUtterance(text);
@@ -69,42 +99,34 @@
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => {
             video.srcObject = s;
-            video.play();
-        }).catch(e => alert("カメラを許可してください"));
+        });
 
         snapBtn.addEventListener('click', () => {
-            speak("スキャンを開始。対象の殺気を測定します。動かないでください。");
-            
-            snapBtn.style.visibility = 'hidden';
+            speak("スキャンを開始します。");
             scanLine.style.display = 'block';
-            gaugeBox.style.display = 'block';
-
-            let width = 0;
-            const interval = setInterval(() => {
-                width += 2;
-                gaugeFill.style.width = width + '%';
-                if (width >= 100) clearInterval(interval);
-            }, 50);
-
+            resultBox.style.display = 'none';
+            
             fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) })
             .then(r => r.json())
             .then(data => {
                 setTimeout(() => {
+                    // 写真撮影
                     const ctx = canvas.getContext('2d');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     ctx.drawImage(video, 0, 0);
-
                     canvas.style.display = 'block';
                     scanLine.style.display = 'none';
-                    gaugeBox.style.display = 'none';
-                    marker.style.display = 'none';
-                    
-                    resultText.innerText = data.result;
-                    resultOverlay.style.display = 'block';
 
-                    speak("鑑定完了。こんなん出ましたけど！");
-                }, 3000);
+                    // 結果流し込み
+                    const lines = data.result.split('\n');
+                    document.getElementById('resTitle').innerText = lines[0].replace('【称号】：', '');
+                    document.getElementById('resScore').innerText = lines[1].replace('【適正】：', '');
+                    document.getElementById('resAdvice').innerText = lines[4] || lines[3]; // 仙人の一言を抽出
+
+                    resultBox.style.display = 'block';
+                    speak("診断完了。こんなん出ましたけど！");
+                }, 2500);
             });
         });
     </script>
