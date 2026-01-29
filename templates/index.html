@@ -3,44 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>アングラー診断</title>
+    <title>アングラー診断 PRO</title>
     <style>
-        body { background: #000b1a; color: #00ffff; text-align: center; font-family: sans-serif; margin: 0; padding: 10px; }
-        h1 { font-size: 1.4rem; margin: 10px 0; }
-        .container { position: relative; width: 280px; height: 350px; margin: 0 auto; background: #000; border: 2px solid #00ffff; border-radius: 10px; overflow: hidden; }
+        body { background: #000b1a; color: #00ffff; text-align: center; font-family: 'Courier New', sans-serif; margin: 0; padding: 10px; }
+        .container { position: relative; width: 300px; height: 380px; margin: 0 auto; background: #000; border: 4px double #00ffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px #00ffff; }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        canvas { display: none; z-index: 5; }
-        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #fff; box-shadow: 0 0 10px #00ffff; z-index: 10; display: none; animation: scan 1.5s infinite; }
-        @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
-        .btn { background: #ff4136; color: #fff; padding: 12px 30px; border-radius: 50px; border: none; font-weight: bold; margin-top: 15px; cursor: pointer; }
-        .result-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0, 0, 0, 0.7); color: #fff; padding: 10px; font-size: 0.8rem; text-align: left; box-sizing: border-box; z-index: 15; display: none; border-top: 1px solid #00ffff; white-space: pre-wrap; }
+        
+        /* ターゲットマーカー */
+        .target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 180px; height: 180px; border: 2px dashed #ff0000; z-index: 20; display: block; }
+        .target-box::before { content: "LOCK ON"; position: absolute; top: -20px; left: 0; color: #ff0000; font-size: 10px; font-weight: bold; }
+
+        /* 殺気ゲージ */
+        .gauge-container { position: absolute; bottom: 80px; left: 10%; width: 80%; height: 10px; border: 1px solid #00ffff; z-index: 25; display: none; }
+        .gauge-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ffff, #ff0000); transition: width 0.1s; }
+
+        /* スキャン演出 */
+        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px #ff0000; z-index: 30; display: none; animation: scan 1.2s infinite; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* 結果オーバーレイ */
+        .result-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 11, 26, 0.85); color: #fff; z-index: 40; display: none; padding: 20px; box-sizing: border-box; border: 2px solid #00ffff; }
+        .result-header { font-size: 1.2rem; color: #ffdc00; margin-bottom: 10px; border-bottom: 2px solid #ffdc00; }
+        .result-content { font-size: 0.9rem; text-align: left; line-height: 1.8; }
+
+        .btn { background: #ff4136; color: #fff; padding: 15px 40px; border-radius: 5px; border: 2px solid #fff; font-weight: bold; margin-top: 20px; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
-    <h1>🎣 アングラー診断</h1>
+    <h1 style="text-shadow: 0 0 10px #00ffff;">ANGLER SCANNER v2.0</h1>
     
     <div class="container">
         <video id="video" autoplay playsinline muted></video>
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div class="target-box" id="marker"></div>
         <div id="scanLine" class="scan-line"></div>
-        <div id="resultOverlay" class="result-overlay"></div>
+        
+        <div class="gauge-container" id="gaugeBox">
+            <div style="font-size:8px; color:#fff; text-align:left;">DETECTING KILLER INSTINCT (殺気検知中...)</div>
+            <div class="gauge-fill" id="gaugeFill"></div>
+        </div>
+
+        <div id="resultOverlay" class="result-overlay">
+            <div class="result-header">【アングラー鑑定書】</div>
+            <div class="result-content" id="resultText"></div>
+            <button onclick="location.reload()" style="background:none; border:1px solid #00ffff; color:#00ffff; margin-top:20px; cursor:pointer;">RE-SCAN</button>
+        </div>
     </div>
 
-    <button id="snap" class="btn">適正をスキャン</button>
+    <button id="snap" class="btn">SCAN TARGET</button>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const resultOverlay = document.getElementById('resultOverlay');
+        const resultText = document.getElementById('resultText');
         const scanLine = document.getElementById('scanLine');
+        const gaugeBox = document.getElementById('gaugeBox');
+        const gaugeFill = document.getElementById('gaugeFill');
         const snapBtn = document.getElementById('snap');
+        const marker = document.getElementById('marker');
 
-        // 音声合成の準備
         function speak(text) {
             const uttr = new SpeechSynthesisUtterance(text);
             uttr.lang = 'ja-JP';
-            uttr.rate = 1.0; // 速度
-            uttr.pitch = 1.0; // 声の高さ
             window.speechSynthesis.speak(uttr);
         }
 
@@ -50,13 +75,23 @@
         });
 
         snapBtn.addEventListener('click', () => {
-            // 診断開始の音声
-            speak("スキャンを開始します。動かないでください。");
+            speak("スキャンを開始。対象の殺気を測定します。");
             
+            snapBtn.style.display = 'none';
             scanLine.style.display = 'block';
-            snapBtn.disabled = true;
-            resultOverlay.style.display = 'none';
-            canvas.style.display = 'none';
+            gaugeBox.style.display = 'block';
+            marker.style.border = '2px solid #ff0000';
+
+            // 殺気ゲージのアニメーション
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                } else {
+                    width += 2;
+                    gaugeFill.style.width = width + '%';
+                }
+            }, 50);
 
             fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) })
             .then(r => r.json())
@@ -67,15 +102,15 @@
                     canvas.height = video.videoHeight;
                     ctx.drawImage(video, 0, 0);
 
-                    canvas.style.display = 'block';
                     scanLine.style.display = 'none';
-                    resultOverlay.innerText = data.result;
+                    gaugeBox.style.display = 'none';
+                    marker.style.display = 'none';
+                    
+                    resultText.innerText = data.result;
                     resultOverlay.style.display = 'block';
-                    snapBtn.disabled = false;
 
-                    // 結果発表の音声
-                    speak("診断完了。こんなん出ましたけど！");
-                }, 2500);
+                    speak("鑑定完了。こんなん出ましたけど！");
+                }, 3000);
             });
         });
     </script>
