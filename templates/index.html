@@ -2,49 +2,88 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ツリスキャン</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>アングラー診断</title>
     <style>
-        body { background: #001529; color: #00ffff; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
-        video { width: 100%; max-width: 400px; border: 2px solid #00ffff; border-radius: 15px; box-shadow: 0 0 20px #00ffff; }
-        .btn { background: #ff4136; color: white; padding: 20px 40px; border-radius: 50px; border: none; font-size: 1.5rem; font-weight: bold; margin-top: 20px; cursor: pointer; box-shadow: 0 5px 15px rgba(255,65,54,0.4); }
-        #result { margin-top: 30px; font-size: 1.2rem; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; line-height: 1.6; }
+        body { 
+            background: #000b1a; color: #00ffff; text-align: center; 
+            font-family: sans-serif; margin: 0; padding: 10px;
+        }
+        h1 { font-size: 1.4rem; margin: 10px 0; }
+        
+        /* カメラ・写真表示エリア */
+        .container { position: relative; width: 280px; height: 350px; margin: 0 auto; background: #000; border: 2px solid #00ffff; border-radius: 10px; overflow: hidden; }
+        video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        canvas { display: none; z-index: 5; } /* 撮影した写真用 */
+
+        /* スキャン線 */
+        .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #fff; box-shadow: 0 0 10px #00ffff; z-index: 10; display: none; animation: scan 1.5s infinite; }
+        @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+        /* ボタン */
+        .btn { background: #ff4136; color: #fff; padding: 12px 30px; border-radius: 50px; border: none; font-weight: bold; margin-top: 15px; cursor: pointer; }
+        .save-hint { font-size: 0.7rem; color: #88ffff; margin-top: 5px; display: none; }
+
+        /* 結果テキストのオーバーレイ（写真の上に載せる） */
+        .result-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(0, 0, 0, 0.6); color: #fff; padding: 10px;
+            font-size: 0.8rem; text-align: left; box-sizing: border-box;
+            z-index: 15; display: none; border-top: 1px solid #00ffff;
+        }
     </style>
 </head>
 <body>
-    <h1>🎣 ツリスキャン</h1>
-    <p>カメラにお前の顔を映せ</p>
-    <video id="video" autoplay playsinline></video>
-    <br>
+    <h1>🎣 アングラー診断</h1>
+    
+    <div class="container" id="captureArea">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="scanLine" class="scan-line"></div>
+        <div id="resultOverlay" class="result-overlay"></div>
+    </div>
+
     <button id="snap" class="btn">適正をスキャン</button>
-    <div id="result"></div>
+    <div id="saveHint" class="save-hint">※写真を長押しで保存できるぞ！</div>
 
     <script>
         const video = document.getElementById('video');
-        const resultDiv = document.getElementById('result');
-        const snap = document.getElementById('snap');
+        const canvas = document.getElementById('canvas');
+        const resultOverlay = document.getElementById('resultOverlay');
+        const scanLine = document.getElementById('scanLine');
+        const snapBtn = document.getElementById('snap');
+        const saveHint = document.getElementById('saveHint');
 
-        // カメラ起動
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { resultDiv.innerText = "カメラを許可してください"; });
+            .then(s => video.srcObject = s);
 
-        // スキャンボタン
-        snap.addEventListener('click', () => {
-            resultDiv.innerHTML = "📡 釣り仙人が解析中...";
-            
-            // サーバーに診断を依頼
-            fetch('/analyze', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({image: "dummy"})
-            })
-            .then(response => response.json())
+        snapBtn.addEventListener('click', () => {
+            // スキャン演出
+            scanLine.style.display = 'block';
+            snapBtn.disabled = true;
+            resultOverlay.style.display = 'none';
+            canvas.style.display = 'none';
+
+            // 診断データ取得
+            fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) })
+            .then(r => r.json())
             .then(data => {
-                resultDiv.innerText = data.result;
-            })
-            .catch(err => {
-                resultDiv.innerText = "通信エラー！電波の良い所でやってくれ。";
+                setTimeout(() => {
+                    // 写真を撮る
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0);
+
+                    // 表示切り替え
+                    canvas.style.display = 'block';
+                    scanLine.style.display = 'none';
+                    resultOverlay.innerText = data.result;
+                    resultOverlay.style.display = 'block';
+                    saveHint.style.display = 'block';
+                    snapBtn.innerText = "もう一度スキャン";
+                    snapBtn.disabled = false;
+                }, 2000);
             });
         });
     </script>
