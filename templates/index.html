@@ -7,64 +7,69 @@
     <style>
         body { 
             background: #000b1a; color: #00ffff; text-align: center; 
-            font-family: 'Hiragino Kaku Gothic ProN', sans-serif; margin: 0; padding: 10px;
+            font-family: sans-serif; margin: 0; padding: 10px; overflow-x: hidden;
         }
 
         /* 企業ロゴエリア */
-        .brand-header {
-            margin: 10px 0 5px 0;
-        }
-        .brand-logo {
-            width: 150px; /* ロゴのサイズ調整 */
-            height: auto;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+        .brand-header { margin: 10px 0 5px 0; }
+        .brand-logo { 
+            width: 160px; height: auto; 
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.5));
         }
         .app-title {
-            font-size: 1.1rem; color: #fff; letter-spacing: 2px;
-            margin-bottom: 15px; font-weight: bold;
+            font-size: 0.9rem; color: #fff; letter-spacing: 2px;
+            margin-bottom: 15px; font-weight: bold; opacity: 0.8;
         }
         
-        /* カメラコンテナ：画像のようなネオンブルーの枠 */
+        /* スキャンコンテナ */
         .container { 
-            position: relative; width: 280px; height: 320px; margin: 0 auto; 
+            position: relative; width: 280px; height: 350px; margin: 0 auto; 
             background: #000; border: 3px solid #00ffff; border-radius: 15px; 
             overflow: hidden; box-shadow: 0 0 20px #00ffff;
         }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         
-        /* LOCK ONマーカー */
         .target-box { 
             position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; 
             border: 2px dashed #ff4136; z-index: 20; box-sizing: border-box;
         }
         .lock-text {
             position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
-            background: #ff4136; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 3px;
+            background: #ff4136; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 3px; font-weight: bold;
         }
+
+        .gauge-container { 
+            position: absolute; bottom: 60px; left: 10%; width: 80%; height: 12px; 
+            border: 1px solid #00ffff; z-index: 25; display: none; background: rgba(0,0,0,0.6);
+        }
+        .gauge-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ffff, #ff0000); }
 
         .btn { 
-            background: linear-gradient(180deg, #ff4136 0%, #d00 100%); 
-            color: #fff; padding: 12px 40px; border-radius: 50px; border: none; 
+            background: linear-gradient(180deg, #ff4136 0%, #b00 100%); 
+            color: #fff; padding: 14px 40px; border-radius: 50px; border: 2px solid #fff; 
             font-weight: bold; margin-top: 20px; font-size: 1.2rem; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
         }
 
-        /* 結果表示：画像のようなグレー透過ボックス */
         .result-box {
-            margin: 20px auto; width: 280px; background: rgba(255, 255, 255, 0.1);
-            padding: 15px; border-radius: 10px; text-align: left;
-            border: 1px solid rgba(0, 255, 255, 0.2); display: none;
+            margin: 20px auto; width: 290px; background: rgba(255, 255, 255, 0.1);
+            padding: 15px; border-radius: 12px; text-align: left;
+            border: 1px solid rgba(0, 255, 255, 0.3); display: none;
+            box-sizing: border-box;
         }
-        .result-item { margin-bottom: 10px; font-size: 0.9rem; }
+        .res-row { margin-bottom: 8px; font-size: 0.95rem; line-height: 1.4; }
         .label { color: #00ffff; font-weight: bold; }
+        .val-title { color: #ffdc00; font-weight: bold; font-size: 1.1rem; }
         
         .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #fff; box-shadow: 0 0 15px #00ffff; z-index: 30; display: none; animation: scan 1.5s infinite linear; }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        
+        .save-hint { font-size: 0.7rem; color: #88ffff; margin-top: 10px; opacity: 0.7; }
     </style>
 </head>
 <body>
     <div class="brand-header">
-        <img src="https://your-image-url.com/mac-fishing-logo.png" alt="Mac Fishing" class="brand-logo">
+        <img src="https://raw.githubusercontent.com/maimu1113-coder/fishing-scan/refs/heads/main/%EF%BC%B7%EF%BC%AB.png" alt="Mac Fishing" class="brand-logo">
     </div>
     <div class="app-title">ANGLER SCANNER v2.0</div>
     
@@ -73,23 +78,31 @@
         <canvas id="canvas" style="display:none;"></canvas>
         <div id="marker" class="target-box"><span class="lock-text">LOCK ON</span></div>
         <div id="scanLine" class="scan-line"></div>
+        <div class="gauge-container" id="gaugeBox">
+            <div class="gauge-fill" id="gaugeFill"></div>
+        </div>
     </div>
 
     <button id="snap" class="btn">適正をスキャン</button>
+    <p class="save-hint">※スキャン完了後、画像を長押しで保存可能</p>
 
     <div id="resultBox" class="result-box">
-        <div class="result-item"><span class="label">【称号】：</span><span id="resTitle"></span></div>
-        <div class="result-item"><span class="label">【適正】：</span><span id="resScore"></span></div>
-        <div class="result-item" style="margin-top:15px;"><span class="label">【一言】：</span><br><span id="resAdvice"></span></div>
+        <div class="res-row"><span class="label">【称号】：</span><span id="resTitle" class="val-title"></span></div>
+        <div class="res-row"><span class="label">【適正】：</span><span id="resScore"></span></div>
+        <div class="res-row" style="margin-top:12px; border-top: 1px dashed rgba(0,255,255,0.3); padding-top:10px;">
+            <span class="label">【一言】：</span><br><span id="resAdvice" style="color:#fff;"></span>
+        </div>
+        <button onclick="location.reload()" style="background:none; border:1px solid #00ffff; color:#00ffff; margin-top:15px; width:100%; padding:5px; cursor:pointer; font-size:0.8rem; border-radius:5px;">再スキャン</button>
     </div>
 
     <script>
-        // 前回のスクリプト機能をここに統合（音声、スキャン、撮影など）
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const resultBox = document.getElementById('resultBox');
         const snapBtn = document.getElementById('snap');
         const scanLine = document.getElementById('scanLine');
+        const gaugeBox = document.getElementById('gaugeBox');
+        const gaugeFill = document.getElementById('gaugeFill');
 
         function speak(text) {
             const uttr = new SpeechSynthesisUtterance(text);
@@ -99,34 +112,46 @@
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => {
             video.srcObject = s;
+            video.play();
+        }).catch(e => {
+            alert("カメラを許可してください。ブラウザの設定を確認してください。");
         });
 
         snapBtn.addEventListener('click', () => {
-            speak("スキャンを開始します。");
+            speak("スキャンを開始します。対象の殺気を測定中。動かないでください。");
             scanLine.style.display = 'block';
+            gaugeBox.style.display = 'block';
             resultBox.style.display = 'none';
+            snapBtn.style.visibility = 'hidden';
             
+            let w = 0;
+            const interval = setInterval(() => {
+                w += 2;
+                gaugeFill.style.width = w + '%';
+                if(w >= 100) clearInterval(interval);
+            }, 50);
+
             fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) })
             .then(r => r.json())
             .then(data => {
                 setTimeout(() => {
-                    // 写真撮影
                     const ctx = canvas.getContext('2d');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     ctx.drawImage(video, 0, 0);
                     canvas.style.display = 'block';
                     scanLine.style.display = 'none';
+                    gaugeBox.style.display = 'none';
+                    document.getElementById('marker').style.display = 'none';
 
-                    // 結果流し込み
                     const lines = data.result.split('\n');
                     document.getElementById('resTitle').innerText = lines[0].replace('【称号】：', '');
                     document.getElementById('resScore').innerText = lines[1].replace('【適正】：', '');
-                    document.getElementById('resAdvice').innerText = lines[4] || lines[3]; // 仙人の一言を抽出
+                    document.getElementById('resAdvice').innerText = lines[4] || lines[3];
 
                     resultBox.style.display = 'block';
-                    speak("診断完了。こんなん出ましたけど！");
-                }, 2500);
+                    speak("鑑定完了。こんなん出ましたけど！");
+                }, 3000);
             });
         });
     </script>
